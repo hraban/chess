@@ -156,6 +156,11 @@ func (b board) Get(loc coords) piece {
 	return <-c
 }
 
+func (b board) Close() error {
+	clearBoard(b)
+	return nil
+}
+
 // Control operations are read from the control channel.
 func spawnPiece(b board, c <-chan pop) {
 	var loc coords
@@ -309,6 +314,14 @@ func initBoard(b board) {
 	initBoard1p(b, BLACK)
 }
 
+func NewBoard() board {
+	boardc := make(chan bop)
+	boarddone := make(chan bool)
+	go runBoard(boardc, boarddone)
+	initBoard(boardc)
+	return boardc
+}
+
 func clearBoard(b board) {
 	piecesc := make(chan piece)
 	b <- bopGetAllPieces(piecesc)
@@ -334,16 +347,12 @@ func parseMoveOp(from, to string) (op bopMovePiece, err error) {
 }
 
 func main() {
-	boardc := make(chan bop)
-	boarddone := make(chan bool)
-	go runBoard(boardc, boarddone)
-	initBoard(boardc)
+	b := NewBoard()
 	// Open with a white pawn
 	op, err := parseMoveOp("D2", "D4")
 	if err != nil {
 		panic(err.Error())
 	}
-	b := board(boardc)
 	b.Get(op.from).Move(op.to)
-	clearBoard(boardc)
+	b.Close()
 }
