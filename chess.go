@@ -111,9 +111,38 @@ func (p piece) ptype() pieceType {
 	return <-pc
 }
 
+func (p piece) loc() coords {
+	cc := make(chan coords)
+	p <- popGetCoords(cc)
+	return <-cc
+}
+
 // Returns nil if the attempted move is valid
-func (p piece) validate(m popMove) error {
-	// TODO
+func (p piece) validate(to popMove) error {
+	pt := p.ptype()
+	from := p.loc()
+	switch pt.t {
+	case PAWN:
+		// TODO: Not true when capturing
+		if from.x != to.x {
+			return fmt.Errorf("Pawns can only move vertically")
+		}
+		// TODO: Check collision
+		f := 1
+		if pt.c == BLACK {
+			f = -1
+		}
+		if to.y-from.y == f {
+			break
+		}
+		if (pt.c == WHITE && from.y == 1 && to.y == 3) ||
+			(pt.c == BLACK && from.y == 6 && to.y == 4) {
+			break
+		}
+		return fmt.Errorf("Illegal move")
+		break
+		// TODO: More pieces
+	}
 	return nil
 }
 
@@ -353,6 +382,9 @@ func main() {
 	if err != nil {
 		panic(err.Error())
 	}
-	b.Get(op.from).Move(op.to)
+	err = b.Get(op.from).Move(op.to)
+	if err != nil {
+		panic(err.Error())
+	}
 	b.Close()
 }
